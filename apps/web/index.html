@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#061826" />
+    <meta name="description" content="IMPÉRIUM — atendimento automotivo com agendamento inteligente." />
+    <title>IMPÉRIUM | Atendimento automotivo</title>
+    <link rel="stylesheet" href="./src/styles.css" />
+    <script type="module" src="./src/main.js"></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="#inicio" aria-label="IMPÉRIUM, início"><span>IMPÉRIUM</span><small>LAVA JATO & ESTACIONAMENTO</small></a>
+      <nav aria-label="Navegação principal"><a href="#servicos">Serviços</a><a href="#como-funciona">Como funciona</a><a class="button button-small" href="#montar">Montar atendimento</a></nav>
+    </header>
+    <main id="inicio">
+      <section class="hero">
+        <div class="hero-copy"><p class="eyebrow">CUIDADO AUTOMOTIVO EM FRANCA/SP</p><h1>Seu carro, tratado com atenção aos detalhes.</h1><p class="hero-text">Escolha o veículo, monte o atendimento e reserve um horário que realmente comporte o serviço.</p><div class="hero-actions"><a class="button" href="#montar">Montar meu atendimento</a><a class="text-link" href="#como-funciona">Entenda o processo <span aria-hidden="true">→</span></a></div></div>
+        <aside class="hero-card"><span class="card-glow"></span><p class="eyebrow">EXPERIÊNCIA IMPÉRIUM</p><strong>Preço certo para o seu veículo.</strong><p>Marca, modelo, duração e disponibilidade calculados antes da reserva.</p><ul><li>Valores atualizados</li><li>Reserva temporária de horário</li><li>Confirmação após pagamento</li></ul></aside>
+      </section>
+      <section class="trust-bar" aria-label="Diferenciais"><span>AGENDAMENTO INTELIGENTE</span><span>•</span><span>PREÇO POR VEÍCULO</span><span>•</span><span>PAGAMENTO PIX</span></section>
+      <section id="montar" class="builder-section">
+        <div class="section-heading"><p class="eyebrow">MONTE SEU ATENDIMENTO</p><h2>Vamos começar pelo seu veículo.</h2><p>O catálogo V2 não carrega dados de teste. Assim que as marcas e modelos reais forem cadastrados pelo painel, a busca aparecerá aqui.</p></div>
+        <div class="builder-shell"><ol class="steps" aria-label="Etapas"><li class="active"><span>01</span> Veículo</li><li><span>02</span> Serviço</li><li><span>03</span> Complementos</li><li><span>04</span> Horário</li></ol><div class="vehicle-search"><label for="make-search">Qual é a marca do veículo?</label><div class="search-field"><input id="make-search" type="search" autocomplete="off" placeholder="Ex.: Volkswagen" /><button id="search-makes" type="button">Buscar</button></div><p id="api-status" class="status-message" role="status">Conectando ao catálogo V2…</p><ul id="make-results" class="search-results" aria-live="polite"></ul></div></div>
+      </section>
+      <section id="servicos" class="services-section"><div class="section-heading"><p class="eyebrow">CATÁLOGO REAL</p><h2>Uma estrutura feita para serviços, adicionais e regras de compatibilidade.</h2></div><div class="service-pill-grid"><article><span>01</span><h3>Serviço principal</h3><p>Preço e duração calculados pela categoria ou modelo do veículo.</p></article><article><span>02</span><h3>Complementos</h3><p>Somente opções compatíveis com o atendimento selecionado.</p></article><article><span>03</span><h3>Adicionais</h3><p>Resumo completo antes de reservar o horário.</p></article></div></section>
+      <section id="como-funciona" class="process"><div><p class="eyebrow">SEM SURPRESAS</p><h2>Do veículo à confirmação, com regras claras.</h2></div><ol><li><strong>Identifique o veículo.</strong><span>O modelo informa a categoria de preço.</span></li><li><strong>Veja o valor real.</strong><span>Exceções de modelo têm prioridade sobre a tabela da categoria.</span></li><li><strong>Reserve o horário.</strong><span>A vaga fica protegida durante o pagamento Pix.</span></li></ol></section>
+    </main>
+    <footer><span>IMPÉRIUM Lava Jato e Estacionamento</span><span>Franca, SP</span></footer>
+  </body>
+</html>
