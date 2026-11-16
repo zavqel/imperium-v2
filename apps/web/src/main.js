@@ -97,27 +97,37 @@ async function selectMake(makeId) {
   }
 }
 
-function renderModels(items) {
-  if (!items.length) {
-    results.innerHTML = `
-      <li>Nenhum modelo encontrado para esta marca.</li>
-      <li><button type="button" data-back-makes>Voltar às marcas</button></li>
-    `;
-    return;
-  }
 
+function renderModels(items) {
   results.innerHTML = `
     <li class="selection-heading">
       Modelos de ${escapeHtml(selectedMake.name)}
     </li>
-    ${items.map((item) => `
-      <li>
-        <button type="button" data-model-id="${item.id}">
-          ${escapeHtml(item.name)}
-          <span>Selecionar</span>
-        </button>
-      </li>
-    `).join("")}
+
+    <li class="model-search">
+      <input
+        id="model-search"
+        type="search"
+        autocomplete="off"
+        placeholder="Pesquisar modelo: Gol, Polo, Onix..."
+      />
+      <button type="button" id="search-models">
+        Buscar
+      </button>
+    </li>
+
+    ${items.length
+      ? items.map((item) => `
+        <li>
+          <button type="button" data-model-id="${item.id}">
+            ${escapeHtml(item.name)}
+            <span>Selecionar</span>
+          </button>
+        </li>
+      `).join("")
+      : "<li>Nenhum modelo encontrado.</li>"
+    }
+
     <li>
       <button type="button" data-back-makes>
         ← Voltar às marcas
@@ -125,6 +135,7 @@ function renderModels(items) {
     </li>
   `;
 }
+
 
 function selectModel(modelId) {
   const modelButton = results.querySelector(`[data-model-id="${modelId}"]`);
