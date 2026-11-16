@@ -410,15 +410,15 @@ if (kind === "vehicle-makes") {
   }));
 }
 
-  
-if (kind === "vehicle-makes") {
+  if (kind === "vehicle-models") {
   actions.append(element("button", {
     className: "button",
     type: "button",
     text: "Importar modelos de todas as marcas",
     onClick: async (event) => {
       const button = event.currentTarget;
-      const makes = response.items.filter((item) => item.active);
+      const makesResponse = await request("/v1/admin/vehicle-makes");
+const makes = makesResponse.items.filter((item) => item.active);
 
       if (!makes.length) {
         say(appMessage, "Nenhuma marca ativa encontrada.", "error");
