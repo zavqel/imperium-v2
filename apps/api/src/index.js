@@ -370,20 +370,40 @@ async function listMakes(env, url) {
 }
 
 
-const result = await env.DB.prepare(`
-  SELECT vm.id, vm.name, vc.name AS category
-  FROM vehicle_models vm
-  JOIN vehicle_categories vc ON vc.id = vm.vehicle_category_id
-  WHERE vm.make_id = ?
-    AND vm.active = 1
-    AND vc.active = 1
-    AND vm.normalized_name LIKE ?
-  ORDER BY vm.name
-  LIMIT 100
-`).bind(makeId, search).all();
+
+async function listModels(env, url) {
+  const makeId = parseId(url.searchParams.get("makeId"), "Marca");
+
+  const searchTerms = normalizeName(
+    url.searchParams.get("q") || ""
+  )
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 8);
+
+  let sql = `
+    SELECT vm.id, vm.name, vc.name AS category
+    FROM vehicle_models vm
+    JOIN vehicle_categories vc ON vc.id = vm.vehicle_category_id
+    WHERE vm.make_id = ?
+      AND vm.active = 1
+      AND vc.active = 1
+  `;
+
+  const params = [makeId];
+
+  for (const term of searchTerms) {
+    sql += " AND vm.normalized_name LIKE ?";
+    params.push(`%${term}%`);
+  }
+
+  sql += " ORDER BY vm.name LIMIT 100";
+
+  const result = await env.DB.prepare(sql).bind(...params).all();
 
   return result.results || [];
 }
+
 
 const FIPE_API_BASE = "https://fipe.parallelum.com.br/api/v2";
 
