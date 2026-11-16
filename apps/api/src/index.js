@@ -5,7 +5,7 @@ export { AvailabilityCoordinator };
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 const SESSION_TTL_SECONDS = 8 * 60 * 60;
-const PASSWORD_ITERATIONS = 600_000;
+const PASSWORD_ITERATIONS = 100_000;
 const DEFAULTS = Object.freeze({
   opensAtMinute: 480,
   closesAtMinute: 1020,
