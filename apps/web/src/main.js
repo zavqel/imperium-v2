@@ -196,6 +196,12 @@ results.addEventListener("click", async (event) => {
   const makeButton = event.target.closest("[data-make-id]");
   const modelButton = event.target.closest("[data-model-id]");
   const backButton = event.target.closest("[data-back-makes]");
+  const searchModelsButton = event.target.closest("#search-models");
+
+if (searchModelsButton) {
+  await searchModels();
+  return;
+}
 
   if (makeButton) {
     await selectMake(makeButton.dataset.makeId);
@@ -218,6 +224,16 @@ button.addEventListener("click", searchMakes);
 
 input.addEventListener("keydown", (event) => {
   if (event.key === "Enter") searchMakes();
+});
+
+results.addEventListener("keydown", async (event) => {
+  if (
+    event.target.id === "model-search" &&
+    event.key === "Enter"
+  ) {
+    event.preventDefault();
+    await searchModels();
+  }
 });
 
 request("/health")
