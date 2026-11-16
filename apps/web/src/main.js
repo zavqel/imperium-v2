@@ -98,6 +98,7 @@ async function selectMake(makeId) {
 }
 
 
+
 function renderModels(items) {
   results.innerHTML = `
     <li class="selection-heading">
@@ -109,24 +110,28 @@ function renderModels(items) {
         id="model-search"
         type="search"
         autocomplete="off"
-        placeholder="Pesquisar modelo: Gol, Polo, Onix..."
+        placeholder="Pesquisar: Gol, Polo, Onix..."
       />
       <button type="button" id="search-models">
         Buscar
       </button>
     </li>
 
-    ${items.length
-      ? items.map((item) => `
-        <li>
-          <button type="button" data-model-id="${item.id}">
-            ${escapeHtml(item.name)}
-            <span>Selecionar</span>
-          </button>
-        </li>
-      `).join("")
-      : "<li>Nenhum modelo encontrado.</li>"
-    }
+    <li>
+      <div id="model-results">
+        ${items.length
+          ? items.map((item) => `
+            <div>
+              <button type="button" data-model-id="${item.id}">
+                ${escapeHtml(item.name)}
+                <span>Selecionar</span>
+              </button>
+            </div>
+          `).join("")
+          : "Nenhum modelo encontrado."
+        }
+      </div>
+    </li>
 
     <li>
       <button type="button" data-back-makes>
@@ -134,6 +139,37 @@ function renderModels(items) {
       </button>
     </li>
   `;
+}
+
+
+async function searchModels() {
+  if (!selectedMake) return;
+
+  const searchInput = document.querySelector("#model-search");
+  const modelResults = document.querySelector("#model-results");
+
+  const query = encodeURIComponent(searchInput.value.trim());
+
+  modelResults.textContent = "Pesquisando modelos...";
+
+  try {
+    const data = await request(
+      `/v1/public/vehicle-models?makeId=${selectedMake.id}&q=${query}`
+    );
+
+    modelResults.innerHTML = (data.items || []).length
+      ? data.items.map((item) => `
+          <div>
+            <button type="button" data-model-id="${item.id}">
+              ${escapeHtml(item.name)}
+              <span>Selecionar</span>
+            </button>
+          </div>
+        `).join("")
+      : "Nenhum modelo encontrado.";
+  } catch (error) {
+    modelResults.textContent = error.message;
+  }
 }
 
 
