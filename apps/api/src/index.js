@@ -462,6 +462,128 @@ async function importFipeCarBrands(env, user) {
   };
 }
 
+
+async function importFipeCarModels(env, user, body) {
+  const makeId = parseId(body.makeId, "Marca");
+
+  const make = await env.DB.prepare(`
+    SELECT id, name, fipe_code
+    FROM vehicle_makes
+    WHERE id = ? AND active = 1
+  `).bind(makeId).first();
+
+  if (!make || !make.fipe_code) {
+    throw new HttpError(404, "Marca não encontrada ou sem código FIPE.");
+  }
+
+  const category = await env.DB.prepare(`
+    SELECT id FROM vehicle_categories
+    WHERE name = 'Não classificado' AND active = 1
+    LIMIT 1
+  `).first();
+
+  if (!category) {
+    throw new HttpError(409, "A categoria Não classificado não está cadastrada ou está inativa.");
+  }
+
+  const models = await fipeRequest(
+    env,
+    `/cars/brands/${encodeURIComponent(make.fipe_code)}/models`
+  );
+
+  const validModels = models
+    .filter((model) => model.code !== undefined && model.code !== null && model.name)
+    .map((model) => ({
+      code: String(model.code).trim(),
+      name: String(model.name).trim(),
+      normalizedName: normalizeName(model.name),
+    }));
+
+  if (validModels.length === 0) {
+    throw new HttpError(502, "A FIPE não retornou modelos válidos para esta marca.");
+  }
+
+  const existing = await env.DB.prepare(`
+    SELECT id, name, normalized_name, fipe_code
+    FROM vehicle_models
+    WHERE make_id = ?
+  `).bind(makeId).all();
+
+  const byCode = new Map();
+  const manualByName = new Map();
+
+  for (const item of existing.results || []) {
+    if (item.fipe_code) {
+      byCode.set(String(item.fipe_code), item);
+    } else {
+      manualByName.set(item.normalized_name, item);
+    }
+  }
+
+  const commands = [];
+  let inserted = 0;
+  let updated = 0;
+
+  for (const model of validModels) {
+    const coded = byCode.get(model.code);
+
+    if (coded) {
+      commands.push(env.DB.prepare(`
+        UPDATE vehicle_models
+        SET name = ?, normalized_name = ?, active = 1,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).bind(model.name, model.normalizedName, coded.id));
+      updated++;
+      continue;
+    }
+
+    const manual = manualByName.get(model.normalizedName);
+
+    if (manual) {
+      commands.push(env.DB.prepare(`
+        UPDATE vehicle_models
+        SET fipe_code = ?, name = ?, normalized_name = ?,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND fipe_code IS NULL
+      `).bind(model.code, model.name, model.normalizedName, manual.id));
+      updated++;
+      continue;
+    }
+
+    commands.push(env.DB.prepare(`
+      INSERT INTO vehicle_models
+        (make_id, vehicle_category_id, name, normalized_name, active, fipe_code)
+      VALUES (?, ?, ?, ?, 1, ?)
+    `).bind(makeId, category.id, model.name, model.normalizedName, model.code));
+
+    inserted++;
+  }
+
+  for (let i = 0; i < commands.length; i += 50) {
+    await env.DB.batch(commands.slice(i, i + 50));
+  }
+
+  await audit(env, user, "import_fipe", "vehicle_models", makeId, null, {
+    make: make.name,
+    received: models.length,
+    processed: validModels.length,
+    inserted,
+    updated,
+  });
+
+  return {
+    success: true,
+    make: make.name,
+    received: models.length,
+    processed: validModels.length,
+    inserted,
+    updated,
+    message: `Modelos da marca ${make.name} importados da FIPE.`,
+  };
+}
+
+
 async function exists(env, table, id, label) {
   const allowed = new Set(["vehicle_categories", "vehicle_makes", "vehicle_models", "service_categories", "services", "addons"]);
   if (!allowed.has(table)) throw new Error("Tabela não permitida.");
