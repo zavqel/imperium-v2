@@ -412,6 +412,55 @@ async function fipeRequest(env, path) {
   return data;
 }
 
+async function importFipeCarBrands(env, user) {
+  const brands = await fipeRequest(env, "/cars/brands");
+
+  const validBrands = brands
+    .filter((brand) => brand.code && brand.name)
+    .map((brand) => ({
+      code: String(brand.code).trim(),
+      name: String(brand.name).trim(),
+    }));
+
+  if (validBrands.length === 0) {
+    throw new HttpError(502, "A FIPE não retornou marcas válidas.");
+  }
+
+  const commands = validBrands.map((brand) =>
+    env.DB.prepare(`
+      INSERT INTO vehicle_makes (name, normalized_name, fipe_code, active)
+      VALUES (?, ?, ?, 1)
+      ON CONFLICT(normalized_name) DO UPDATE SET
+        fipe_code = excluded.fipe_code,
+        updated_at = CURRENT_TIMESTAMP
+    `).bind(
+      brand.name,
+      normalizeName(brand.name),
+      brand.code
+    )
+  );
+
+  for (let i = 0; i < commands.length; i += 50) {
+    await env.DB.batch(commands.slice(i, i + 50));
+  }
+
+  await audit(
+    env,
+    user,
+    "import_fipe",
+    "vehicle_makes",
+    "cars",
+    null,
+    { received: brands.length, processed: validBrands.length }
+  );
+
+  return {
+    success: true,
+    received: brands.length,
+    processed: validBrands.length,
+    message: "Marcas de automóveis importadas da FIPE."
+  };
+}
 
 async function exists(env, table, id, label) {
   const allowed = new Set(["vehicle_categories", "vehicle_makes", "vehicle_models", "service_categories", "services", "addons"]);
@@ -720,6 +769,9 @@ async function adminRoute(request, env, url) {
   if (request.method === "POST" && path === "/v1/admin/login") return login(env, await parseJson(request));
 
   const user = await authenticatedUser(request, env);
+  if (request.method === "POST" && path === "/v1/admin/fipe/import-car-brands") {
+  return importFipeCarBrands(env, user);
+}
   if (request.method === "GET" && path === "/v1/admin/session") return { user };
   if (request.method === "GET" && path === "/v1/admin/dashboard") return dashboard(env);
   if (request.method === "GET" && path === "/v1/admin/pricing") return pricing(env);
