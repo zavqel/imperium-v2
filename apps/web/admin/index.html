@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#071b2a" />
+    <meta name="robots" content="noindex,nofollow" />
+    <meta name="description" content="Painel administrativo seguro do IMPÉRIUM." />
+    <title>IMPÉRIUM | Painel V2</title>
+    <link rel="stylesheet" href="./admin.css" />
+    <script type="module" src="./admin.js"></script>
+  </head>
+  <body>
+    <div class="grain" aria-hidden="true"></div>
+    <main id="auth-shell" class="auth-shell">
+      <section class="auth-card">
+        <a class="brand" href="../" aria-label="Voltar ao site IMPÉRIUM">
+          <span>IMPÉRIUM</span>
+          <small>LAVA JATO & ESTACIONAMENTO</small>
+        </a>
+        <p class="eyebrow">PAINEL OPERACIONAL V2</p>
+        <h1 id="auth-title">Verificando acesso seguro…</h1>
+        <p id="auth-copy" class="muted">Aguarde um instante.</p>
+        <form id="login-form" class="stack hidden" novalidate>
+          <label>E-mail<input name="email" type="email" autocomplete="email" required /></label>
+          <label>Senha<input name="password" type="password" autocomplete="current-password" minlength="12" required /></label>
+          <button class="button" type="submit">Entrar no painel</button>
+        </form>
+        <form id="bootstrap-form" class="stack hidden" novalidate>
+          <label>Seu nome<input name="displayName" type="text" autocomplete="name" maxlength="100" required /></label>
+          <label>E-mail<input name="email" type="email" autocomplete="email" required /></label>
+          <label>Senha forte<input name="password" type="password" autocomplete="new-password" minlength="12" required /></label>
+          <label>Código de configuração<input name="bootstrapToken" type="password" autocomplete="off" minlength="32" required /></label>
+          <p class="form-note">Use o código criado nos segredos do Worker. Ele não fica salvo no navegador.</p>
+          <button class="button" type="submit">Criar administrador</button>
+        </form>
+        <p id="auth-message" class="message" role="status"></p>
+      </section>
+    </main>
+
+    <div id="app-shell" class="app-shell hidden">
+      <aside class="sidebar">
+        <a class="brand" href="../"><span>IMPÉRIUM</span><small>PAINEL V2</small></a>
+        <nav aria-label="Navegação do painel">
+          <button data-view="dashboard" class="nav-item active">Visão geral</button>
+          <p class="nav-label">CATÁLOGO</p>
+          <button data-view="vehicle-categories" class="nav-item">Categorias de veículo</button>
+          <button data-view="vehicle-makes" class="nav-item">Marcas</button>
+          <button data-view="vehicle-models" class="nav-item">Modelos</button>
+          <button data-view="service-categories" class="nav-item">Categorias de serviço</button>
+          <button data-view="services" class="nav-item">Serviços</button>
+          <button data-view="addons" class="nav-item">Adicionais</button>
+          <p class="nav-label">OPERAÇÃO</p>
+          <button data-view="pricing" class="nav-item">Preços e compatibilidade</button>
+          <button data-view="operations" class="nav-item">Agenda e capacidade</button>
+        </nav>
+        <div class="sidebar-foot">
+          <span id="current-user"></span>
+          <button id="logout" class="text-button" type="button">Sair</button>
+        </div>
+      </aside>
+      <section class="workspace">
+        <header class="workspace-header">
+          <div><p id="view-kicker" class="eyebrow">PAINEL</p><h1 id="view-title">Visão geral</h1></div>
+          <a class="site-link" href="../" target="_blank" rel="noreferrer">Ver site ↗</a>
+        </header>
+        <p id="app-message" class="message" role="status"></p>
+        <div id="view-root"></div>
+      </section>
+    </div>
+  </body>
+</html>
