@@ -369,13 +369,19 @@ async function listMakes(env, url) {
   return result.results || [];
 }
 
-async function listModels(env, url) {
-  const makeId = asPositiveInt(url.searchParams.get("makeId"));
-  if (!makeId) throw new HttpError(400, "Marca inválida.");
-  const search = `%${String(url.searchParams.get("q") || "").trim().toLowerCase()}%`;
-  const result = await env.DB.prepare(`SELECT vm.id, vm.name, vc.name AS category FROM vehicle_models vm
-    JOIN vehicle_categories vc ON vc.id = vm.vehicle_category_id
-    WHERE vm.make_id = ? AND vm.active = 1 AND vc.active = 1 AND vm.normalized_name LIKE ? ORDER BY vm.name LIMIT 30`).bind(makeId, search).all();
+
+const result = await env.DB.prepare(`
+  SELECT vm.id, vm.name, vc.name AS category
+  FROM vehicle_models vm
+  JOIN vehicle_categories vc ON vc.id = vm.vehicle_category_id
+  WHERE vm.make_id = ?
+    AND vm.active = 1
+    AND vc.active = 1
+    AND vm.normalized_name LIKE ?
+  ORDER BY vm.name
+  LIMIT 100
+`).bind(makeId, search).all();
+
   return result.results || [];
 }
 
