@@ -894,6 +894,9 @@ async function adminRoute(request, env, url) {
   if (request.method === "POST" && path === "/v1/admin/fipe/import-car-brands") {
   return importFipeCarBrands(env, user);
 }
+  if (request.method === "POST" && path === "/v1/admin/fipe/import-car-models") {
+  return importFipeCarModels(env, user, await parseJson(request));
+}
   if (request.method === "GET" && path === "/v1/admin/session") return { user };
   if (request.method === "GET" && path === "/v1/admin/dashboard") return dashboard(env);
   if (request.method === "GET" && path === "/v1/admin/pricing") return pricing(env);
