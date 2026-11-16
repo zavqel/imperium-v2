@@ -385,6 +385,31 @@ async function renderCatalog(kind) {
   for (const descriptor of descriptors) form.append(field(descriptor, current || {}));
   const actions = element("div", { className: "form-actions wide" });
   actions.append(element("button", { className: "button", type: "submit", text: current ? "Salvar alterações" : "Cadastrar" }));
+  
+if (kind === "vehicle-makes") {
+  actions.append(element("button", {
+    className: "subtle-button",
+    type: "button",
+    text: "Importar marcas da FIPE",
+    onClick: async () => {
+      try {
+        say(appMessage, "Importando marcas da FIPE...");
+        const result = await request("/v1/admin/fipe/import-car-brands", {
+          method: "POST"
+        });
+        await renderView();
+        say(
+          appMessage,
+          `${result.processed} marcas importadas com sucesso!`,
+          "success"
+        );
+      } catch (error) {
+        say(appMessage, error.message, "error");
+      }
+    }
+  }));
+}
+
   if (current) actions.append(element("button", { className: "subtle-button", type: "button", text: "Cancelar edição", onClick: async () => { state.editId = null; await renderView(); } }));
   form.append(actions);
   form.addEventListener("submit", async (event) => {
