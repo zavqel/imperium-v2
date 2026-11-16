@@ -379,6 +379,40 @@ async function listModels(env, url) {
   return result.results || [];
 }
 
+const FIPE_API_BASE = "https://fipe.parallelum.com.br/api/v2";
+
+async function fipeRequest(env, path) {
+  const token = String(env.FIPE_API_TOKEN || "").trim();
+
+  if (!token) {
+    throw new HttpError(503, "Token da FIPE não configurado.");
+  }
+
+  const response = await fetch(`${FIPE_API_BASE}${path}`, {
+    method: "GET",
+    headers: {
+      "X-Subscription-Token": token,
+      "Accept": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    throw new HttpError(
+      502,
+      `Erro na consulta FIPE: HTTP ${response.status}`
+    );
+  }
+
+  const data = await response.json();
+
+  if (!Array.isArray(data)) {
+    throw new HttpError(502, "Resposta inválida da FIPE.");
+  }
+
+  return data;
+}
+
+
 async function exists(env, table, id, label) {
   const allowed = new Set(["vehicle_categories", "vehicle_makes", "vehicle_models", "service_categories", "services", "addons"]);
   if (!allowed.has(table)) throw new Error("Tabela não permitida.");
