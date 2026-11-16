@@ -410,6 +410,71 @@ if (kind === "vehicle-makes") {
   }));
 }
 
+  
+if (kind === "vehicle-makes") {
+  actions.append(element("button", {
+    className: "button",
+    type: "button",
+    text: "Importar modelos de todas as marcas",
+    onClick: async (event) => {
+      const button = event.currentTarget;
+      const makes = response.items.filter((item) => item.active);
+
+      if (!makes.length) {
+        say(appMessage, "Nenhuma marca ativa encontrada.", "error");
+        return;
+      }
+
+      button.disabled = true;
+      let inserted = 0;
+      let updated = 0;
+      let processed = 0;
+      const errors = [];
+
+      try {
+        for (let i = 0; i < makes.length; i++) {
+          const make = makes[i];
+
+          say(
+            appMessage,
+            `Importando modelos: ${make.name} (${i + 1}/${makes.length})...`
+          );
+
+          try {
+            const result = await request("/v1/admin/fipe/import-car-models", {
+              method: "POST",
+              body: { makeId: make.id },
+            });
+
+            inserted += result.inserted || 0;
+            updated += result.updated || 0;
+            processed += result.processed || 0;
+          } catch (error) {
+            errors.push(`${make.name}: ${error.message}`);
+          }
+        }
+
+        await renderView();
+
+        const summary =
+          `Importação concluída! ${processed} modelos processados, ` +
+          `${inserted} novos e ${updated} atualizados.`;
+
+        say(
+          appMessage,
+          errors.length
+            ? `${summary} ${errors.length} marcas tiveram problemas: ${errors.slice(0, 5).join(" | ")}`
+            : summary,
+          errors.length ? "error" : "success"
+        );
+      } finally {
+        button.disabled = false;
+      }
+    },
+  }));
+}
+
+
   if (current) actions.append(element("button", { className: "subtle-button", type: "button", text: "Cancelar edição", onClick: async () => { state.editId = null; await renderView(); } }));
   form.append(actions);
   form.addEventListener("submit", async (event) => {
