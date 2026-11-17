@@ -411,6 +411,8 @@ async function listPublicServices(env, url) {
     "Modelo"
   );
 
+  
+  
   const model = await env.DB.prepare(`
     SELECT
       vm.id,
@@ -479,6 +481,71 @@ async function listPublicServices(env, url) {
     },
     items: result.results || []
   };
+}
+
+
+async function listPublicAddons(env, url) {
+  const modelId = parseId(
+    url.searchParams.get("modelId"),
+    "Modelo"
+  );
+
+  const serviceId = parseId(
+    url.searchParams.get("serviceId"),
+    "Serviço"
+  );
+
+  const model = await env.DB.prepare(`
+    SELECT id, vehicle_category_id AS categoryId
+    FROM vehicle_models
+    WHERE id = ? AND active = 1
+  `).bind(modelId).first();
+
+  if (!model) {
+    throw new HttpError(404, "Modelo de veículo não encontrado.");
+  }
+
+  const service = await env.DB.prepare(`
+    SELECT id
+    FROM services
+    WHERE id = ? AND active = 1
+  `).bind(serviceId).first();
+
+  if (!service) {
+    throw new HttpError(404, "Serviço não encontrado.");
+  }
+
+  const result = await env.DB.prepare(`
+    SELECT
+      a.id,
+      a.name,
+      a.description,
+      a.image_key AS imageKey,
+      a.duration_minutes AS durationMinutes,
+      CASE
+        WHEN a.pricing_mode = 'fixed'
+          THEN a.fixed_price_cents
+        ELSE cap.price_cents
+      END AS priceCents
+    FROM addons a
+    JOIN service_addon_compatibility c
+      ON c.addon_id = a.id
+    LEFT JOIN category_addon_prices cap
+      ON cap.addon_id = a.id
+      AND cap.vehicle_category_id = ?
+    WHERE c.service_id = ?
+      AND a.active = 1
+      AND (
+        (a.pricing_mode = 'fixed'
+          AND a.fixed_price_cents IS NOT NULL)
+        OR
+        (a.pricing_mode = 'vehicle_category'
+          AND cap.price_cents IS NOT NULL)
+      )
+    ORDER BY a.sort_order, a.name
+  `).bind(model.categoryId, serviceId).all();
+
+  return { items: result.results || [] };
 }
 
 
