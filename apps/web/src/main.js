@@ -190,6 +190,7 @@ function selectModel(modelId) {
 
   status.textContent =
     `Veículo selecionado: ${selectedModel.makeName} ${selectedModel.name}.`;
+  document.body.classList.add("services-active");
 }
 
 results.addEventListener("click", async (event) => {
