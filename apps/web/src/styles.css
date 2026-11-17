@@ -30,3 +30,16 @@ jobs:
           path: apps/web
       - id: deployment
         uses: actions/deploy-pages@v4
+
+/* NAVEGAÇÃO ENTRE AS ETAPAS */
+#servicos {
+  display: none;
+}
+
+body.services-active #montar {
+  display: none;
+}
+
+body.services-active #servicos {
+  display: block;
+}
