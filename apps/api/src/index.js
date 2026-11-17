@@ -1111,6 +1111,13 @@ export default {
     cors
   );
 }
+      if (request.method === "GET" && url.pathname === "/v1/public/addons") {
+  return json(
+    await listPublicAddons(env, url),
+    200,
+    cors
+  );
+}
       if (request.method === "GET" && url.pathname === "/v1/public/vehicle-models") return json({ items: await listModels(env, url) }, 200, cors);
       if (request.method === "POST" && url.pathname === "/v1/public/quotes") return json(await quote(env, await parseJson(request)), 200, cors);
       if (request.method === "POST" && url.pathname === "/v1/public/holds") return json(await createHold(env, await parseJson(request)), 201, cors);
