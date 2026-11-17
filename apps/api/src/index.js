@@ -405,6 +405,83 @@ async function listModels(env, url) {
 }
 
 
+async function listPublicServices(env, url) {
+  const modelId = parseId(
+    url.searchParams.get("modelId"),
+    "Modelo"
+  );
+
+  const model = await env.DB.prepare(`
+    SELECT
+      vm.id,
+      vc.id AS categoryId,
+      vc.name AS categoryName
+    FROM vehicle_models vm
+    JOIN vehicle_categories vc
+      ON vc.id = vm.vehicle_category_id
+    JOIN vehicle_makes mk
+      ON mk.id = vm.make_id
+    WHERE vm.id = ?
+      AND vm.active = 1
+      AND vc.active = 1
+      AND mk.active = 1
+  `).bind(modelId).first();
+
+  if (!model) {
+    throw new HttpError(404, "Modelo de veículo não encontrado.");
+  }
+
+  const result = await env.DB.prepare(`
+    SELECT
+      s.id,
+      s.name,
+      s.slug,
+      s.short_description AS shortDescription,
+      s.image_key AS imageKey,
+      s.duration_minutes AS durationMinutes,
+      s.last_start_minute AS lastStartMinute,
+      COALESCE(
+        o.price_cents,
+        CASE
+          WHEN s.pricing_mode = 'fixed'
+            THEN s.fixed_price_cents
+          ELSE cp.price_cents
+        END
+      ) AS priceCents
+    FROM services s
+    LEFT JOIN model_service_price_overrides o
+      ON o.service_id = s.id
+      AND o.vehicle_model_id = ?
+      AND o.active = 1
+    LEFT JOIN category_service_prices cp
+      ON cp.service_id = s.id
+      AND cp.vehicle_category_id = ?
+    WHERE s.active = 1
+      AND (
+        o.price_cents IS NOT NULL
+        OR (
+          s.pricing_mode = 'fixed'
+          AND s.fixed_price_cents IS NOT NULL
+        )
+        OR (
+          s.pricing_mode = 'vehicle_category'
+          AND cp.price_cents IS NOT NULL
+        )
+      )
+    ORDER BY s.sort_order, s.name
+  `).bind(modelId, model.categoryId).all();
+
+  return {
+    vehicle: {
+      modelId: model.id,
+      categoryId: model.categoryId,
+      category: model.categoryName
+    },
+    items: result.results || []
+  };
+}
+
+
 const FIPE_API_BASE = "https://fipe.parallelum.com.br/api/v2";
 
 async function fipeRequest(env, path) {
@@ -960,6 +1037,13 @@ export default {
         return json({ ok: true, service: "imperium-v2-api", database: database?.connected === 1 ? "connected" : "unavailable" }, 200, cors);
       }
       if (request.method === "GET" && url.pathname === "/v1/public/vehicle-makes") return json({ items: await listMakes(env, url) }, 200, cors);
+      if (request.method === "GET" && url.pathname === "/v1/public/services") {
+  return json(
+    await listPublicServices(env, url),
+    200,
+    cors
+  );
+}
       if (request.method === "GET" && url.pathname === "/v1/public/vehicle-models") return json({ items: await listModels(env, url) }, 200, cors);
       if (request.method === "POST" && url.pathname === "/v1/public/quotes") return json(await quote(env, await parseJson(request)), 200, cors);
       if (request.method === "POST" && url.pathname === "/v1/public/holds") return json(await createHold(env, await parseJson(request)), 201, cors);
