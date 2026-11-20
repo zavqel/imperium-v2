@@ -1115,6 +1115,48 @@ async function renderPricing() {
   ]);
 }
 
+async function deleteRule(item) {
+  const description = `${item.type}: ${item.target}`;
+
+  if (!confirm(`Tem certeza que deseja excluir esta regra?\n\n${description}`)) {
+    return;
+  }
+
+  try {
+    const path = `/v1/admin/pricing/${item.rule}`;
+
+    let body;
+
+    if (item.rule === "category-service") {
+      body = {
+        vehicleCategoryId: Number(item.vehicleCategoryId),
+        serviceId: Number(item.serviceId)
+      };
+    } else if (item.rule === "category-addon") {
+      body = {
+        vehicleCategoryId: Number(item.vehicleCategoryId),
+        addonId: Number(item.addonId)
+      };
+    } else if (item.rule === "model-service") {
+      body = {
+        vehicleModelId: Number(item.vehicleModelId),
+        serviceId: Number(item.serviceId)
+      };
+    }
+
+    await request(path, {
+      method: "DELETE",
+      body
+    });
+
+    say(appMessage, "Regra excluída com sucesso.", "success");
+    await renderView();
+
+  } catch (error) {
+    say(appMessage, error.message, "error");
+  }
+}
+
 async function renderOperations() {
   viewKicker.textContent = "OPERAÇÃO";
   viewTitle.textContent = "Agenda e capacidade";
