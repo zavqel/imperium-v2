@@ -1098,7 +1098,8 @@ async function renderPricing() {
       }
     ],
     {
-      onEdit: editRule
+      onEdit: editRule,
+      onDelete: deleteRule
     }
   );
 
