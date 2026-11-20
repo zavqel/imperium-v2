@@ -539,84 +539,556 @@ function optionLabel(list, id, build = (item) => item.name) {
 async function renderPricing() {
   viewKicker.textContent = "OPERAÇÃO";
   viewTitle.textContent = "Preços e compatibilidade";
-  const data = await request("/v1/admin/pricing");
-  const serviceOptions = data.services.map((item) => ({ value: item.id, label: item.name }));
-  const addonOptions = data.addons.map((item) => ({ value: item.id, label: item.name }));
-  const categoryOptions = data.categories.map((item) => ({ value: item.id, label: item.name }));
-  const modelOptions = data.models.map((item) => ({ value: item.id, label: `${item.makeName} ${item.name}` }));
-  const forms = [];
 
-  const categoryService = element("form", { className: "form-grid", novalidate: "" });
-  categoryService.append(field({ name: "vehicleCategoryId", label: "Categoria de veículo", type: "select", required: true, allowBlank: false, options: categoryOptions }), field({ name: "serviceId", label: "Serviço", type: "select", required: true, allowBlank: false, options: serviceOptions }), field({ name: "price", label: "Preço (R$)", type: "number", min: "0", step: ".01", required: true, wide: true }));
-  categoryService.append(element("div", { className: "form-actions wide" }, element("button", { className: "button", type: "submit", text: "Salvar preço por categoria" })));
+  const data = await request("/v1/admin/pricing");
+
+  const serviceOptions = data.services.map((item) => ({
+    value: item.id,
+    label: item.name
+  }));
+
+  const addonOptions = data.addons.map((item) => ({
+    value: item.id,
+    label: item.name
+  }));
+
+  const categoryOptions = data.categories.map((item) => ({
+    value: item.id,
+    label: item.name
+  }));
+
+  const modelOptions = data.models.map((item) => ({
+    value: item.id,
+    label: `${item.makeName} ${item.name}`
+  }));
+
+  const forms = [];
+  let editingRule = null;
+
+  function clearEditing() {
+    editingRule = null;
+    categoryService.reset();
+    categoryAddon.reset();
+    modelService.reset();
+    say(appMessage);
+    renderView();
+  }
+
+  function addCancelButton(form) {
+    const actions = form.querySelector(".form-actions");
+    if (!actions) return;
+
+    actions.append(
+      element("button", {
+        className: "subtle-button",
+        type: "button",
+        text: "Cancelar edição",
+        onClick: clearEditing
+      })
+    );
+  }
+
+  function prepareEdit(form, values, rule) {
+    editingRule = rule;
+
+    for (const [name, value] of Object.entries(values)) {
+      const control = form.elements.namedItem(name);
+      if (!control) continue;
+
+      control.value = String(value);
+    }
+
+    const submitButton = form.querySelector('button[type="submit"]');
+    if (submitButton) submitButton.textContent = "Salvar alterações";
+
+    addCancelButton(form);
+
+    form.scrollIntoView({
+      behavior: "smooth",
+      block: "center"
+    });
+  }
+
+  // SERVIÇO POR CATEGORIA
+  const categoryService = element("form", {
+    className: "form-grid",
+    novalidate: ""
+  });
+
+  categoryService.append(
+    field({
+      name: "vehicleCategoryId",
+      label: "Categoria de veículo",
+      type: "select",
+      required: true,
+      allowBlank: false,
+      options: categoryOptions
+    }),
+    field({
+      name: "serviceId",
+      label: "Serviço",
+      type: "select",
+      required: true,
+      allowBlank: false,
+      options: serviceOptions
+    }),
+    field({
+      name: "price",
+      label: "Preço (R$)",
+      type: "number",
+      min: "0",
+      step: ".01",
+      required: true,
+      wide: true
+    })
+  );
+
+  categoryService.append(
+    element("div", {
+      className: "form-actions wide"
+    }, element("button", {
+      className: "button",
+      type: "submit",
+      text: "Salvar preço por categoria"
+    }))
+  );
+
   categoryService.addEventListener("submit", async (event) => {
     event.preventDefault();
-    try {
-      const payload = Object.fromEntries(new FormData(categoryService));
-      await request("/v1/admin/pricing/category-service", { method: "PUT", body: { vehicleCategoryId: Number(payload.vehicleCategoryId), serviceId: Number(payload.serviceId), priceCents: moneyToCents(payload.price) } });
-      say(appMessage, "Preço por categoria salvo.", "success");
-      await renderView();
-    } catch (error) { say(appMessage, error.message, "error"); }
-  });
-  forms.push(panel("Serviço por categoria", "Use para serviços cujo valor varia pelo porte do veículo.", [categoryService]));
 
-  const categoryAddon = element("form", { className: "form-grid", novalidate: "" });
-  categoryAddon.append(field({ name: "vehicleCategoryId", label: "Categoria de veículo", type: "select", required: true, allowBlank: false, options: categoryOptions }), field({ name: "addonId", label: "Adicional", type: "select", required: true, allowBlank: false, options: addonOptions }), field({ name: "price", label: "Preço (R$)", type: "number", min: "0", step: ".01", required: true, wide: true }));
-  categoryAddon.append(element("div", { className: "form-actions wide" }, element("button", { className: "button", type: "submit", text: "Salvar adicional por categoria" })));
+    try {
+      const payload = Object.fromEntries(
+        new FormData(categoryService)
+      );
+
+      await request("/v1/admin/pricing/category-service", {
+        method: "PUT",
+        body: {
+          vehicleCategoryId: Number(payload.vehicleCategoryId),
+          serviceId: Number(payload.serviceId),
+          priceCents: moneyToCents(payload.price)
+        }
+      });
+
+      say(
+        appMessage,
+        editingRule ? "Preço atualizado." : "Preço por categoria salvo.",
+        "success"
+      );
+
+      editingRule = null;
+      await renderView();
+    } catch (error) {
+      say(appMessage, error.message, "error");
+    }
+  });
+
+  forms.push(
+    panel(
+      "Serviço por categoria",
+      "Use para serviços cujo valor varia pelo porte do veículo.",
+      [categoryService]
+    )
+  );
+
+  // ADICIONAL POR CATEGORIA
+  const categoryAddon = element("form", {
+    className: "form-grid",
+    novalidate: ""
+  });
+
+  categoryAddon.append(
+    field({
+      name: "vehicleCategoryId",
+      label: "Categoria de veículo",
+      type: "select",
+      required: true,
+      allowBlank: false,
+      options: categoryOptions
+    }),
+    field({
+      name: "addonId",
+      label: "Adicional",
+      type: "select",
+      required: true,
+      allowBlank: false,
+      options: addonOptions
+    }),
+    field({
+      name: "price",
+      label: "Preço (R$)",
+      type: "number",
+      min: "0",
+      step: ".01",
+      required: true,
+      wide: true
+    })
+  );
+
+  categoryAddon.append(
+    element("div", {
+      className: "form-actions wide"
+    }, element("button", {
+      className: "button",
+      type: "submit",
+      text: "Salvar adicional por categoria"
+    }))
+  );
+
   categoryAddon.addEventListener("submit", async (event) => {
     event.preventDefault();
-    try {
-      const payload = Object.fromEntries(new FormData(categoryAddon));
-      await request("/v1/admin/pricing/category-addon", { method: "PUT", body: { vehicleCategoryId: Number(payload.vehicleCategoryId), addonId: Number(payload.addonId), priceCents: moneyToCents(payload.price) } });
-      say(appMessage, "Preço do adicional salvo.", "success");
-      await renderView();
-    } catch (error) { say(appMessage, error.message, "error"); }
-  });
-  forms.push(panel("Adicional por categoria", "Use quando o complemento também varia conforme o veículo.", [categoryAddon]));
 
-  const modelService = element("form", { className: "form-grid", novalidate: "" });
-  modelService.append(field({ name: "vehicleModelId", label: "Modelo", type: "select", required: true, allowBlank: false, options: modelOptions }), field({ name: "serviceId", label: "Serviço", type: "select", required: true, allowBlank: false, options: serviceOptions }), field({ name: "price", label: "Preço (R$)", type: "number", min: "0", step: ".01", required: true }), field({ name: "active", label: "Exceção ativa", type: "checkbox", default: true }));
-  modelService.append(element("div", { className: "form-actions wide" }, element("button", { className: "button", type: "submit", text: "Salvar exceção de modelo" })));
+    try {
+      const payload = Object.fromEntries(
+        new FormData(categoryAddon)
+      );
+
+      await request("/v1/admin/pricing/category-addon", {
+        method: "PUT",
+        body: {
+          vehicleCategoryId: Number(payload.vehicleCategoryId),
+          addonId: Number(payload.addonId),
+          priceCents: moneyToCents(payload.price)
+        }
+      });
+
+      say(
+        appMessage,
+        editingRule ? "Preço do adicional atualizado." : "Preço do adicional salvo.",
+        "success"
+      );
+
+      editingRule = null;
+      await renderView();
+    } catch (error) {
+      say(appMessage, error.message, "error");
+    }
+  });
+
+  forms.push(
+    panel(
+      "Adicional por categoria",
+      "Use quando o complemento também varia conforme o veículo.",
+      [categoryAddon]
+    )
+  );
+
+  // EXCEÇÃO POR MODELO
+  const modelService = element("form", {
+    className: "form-grid",
+    novalidate: ""
+  });
+
+  modelService.append(
+    field({
+      name: "vehicleModelId",
+      label: "Modelo",
+      type: "select",
+      required: true,
+      allowBlank: false,
+      options: modelOptions
+    }),
+    field({
+      name: "serviceId",
+      label: "Serviço",
+      type: "select",
+      required: true,
+      allowBlank: false,
+      options: serviceOptions
+    }),
+    field({
+      name: "price",
+      label: "Preço (R$)",
+      type: "number",
+      min: "0",
+      step: ".01",
+      required: true
+    }),
+    field({
+      name: "active",
+      label: "Exceção ativa",
+      type: "checkbox",
+      default: true
+    })
+  );
+
+  modelService.append(
+    element("div", {
+      className: "form-actions wide"
+    }, element("button", {
+      className: "button",
+      type: "submit",
+      text: "Salvar exceção de modelo"
+    }))
+  );
+
   modelService.addEventListener("submit", async (event) => {
     event.preventDefault();
-    try {
-      const payload = Object.fromEntries(new FormData(modelService));
-      await request("/v1/admin/pricing/model-service", { method: "PUT", body: { vehicleModelId: Number(payload.vehicleModelId), serviceId: Number(payload.serviceId), priceCents: moneyToCents(payload.price), active: modelService.elements.active.checked } });
-      say(appMessage, "Exceção de modelo salva.", "success");
-      await renderView();
-    } catch (error) { say(appMessage, error.message, "error"); }
-  });
-  forms.push(panel("Exceção por modelo", "A exceção tem prioridade sobre o preço por categoria.", [modelService]));
 
-  const selectedServiceId = state.compatibilityServiceId || data.services[0]?.id;
-  const compatibility = element("form", { className: "form-grid", novalidate: "" });
-  const serviceSelect = makeSelect("serviceId", serviceOptions, { value: selectedServiceId, required: true, allowBlank: false, label: "Serviço" });
-  serviceSelect.addEventListener("change", async () => { state.compatibilityServiceId = Number(serviceSelect.value); await renderView(); });
-  compatibility.append(element("label", { className: "wide" }, [document.createTextNode("Serviço principal"), serviceSelect]));
-  const compatibleIds = new Set(data.compatibilities.filter((item) => Number(item.serviceId) === Number(selectedServiceId)).map((item) => Number(item.addonId)));
-  const checkList = element("div", { className: "check-list wide" });
+    try {
+      const payload = Object.fromEntries(
+        new FormData(modelService)
+      );
+
+      await request("/v1/admin/pricing/model-service", {
+        method: "PUT",
+        body: {
+          vehicleModelId: Number(payload.vehicleModelId),
+          serviceId: Number(payload.serviceId),
+          priceCents: moneyToCents(payload.price),
+          active: modelService.elements.active.checked
+        }
+      });
+
+      say(
+        appMessage,
+        editingRule ? "Exceção atualizada." : "Exceção de modelo salva.",
+        "success"
+      );
+
+      editingRule = null;
+      await renderView();
+    } catch (error) {
+      say(appMessage, error.message, "error");
+    }
+  });
+
+  forms.push(
+    panel(
+      "Exceção por modelo",
+      "A exceção tem prioridade sobre o preço por categoria.",
+      [modelService]
+    )
+  );
+
+  // COMPATIBILIDADE
+  const selectedServiceId =
+    state.compatibilityServiceId || data.services[0]?.id;
+
+  const compatibility = element("form", {
+    className: "form-grid",
+    novalidate: ""
+  });
+
+  const serviceSelect = makeSelect(
+    "serviceId",
+    serviceOptions,
+    {
+      value: selectedServiceId,
+      required: true,
+      allowBlank: false,
+      label: "Serviço"
+    }
+  );
+
+  serviceSelect.addEventListener("change", async () => {
+    state.compatibilityServiceId = Number(serviceSelect.value);
+    await renderView();
+  });
+
+  compatibility.append(
+    element("label", {
+      className: "wide"
+    }, [
+      document.createTextNode("Serviço principal"),
+      serviceSelect
+    ])
+  );
+
+  const compatibleIds = new Set(
+    data.compatibilities
+      .filter(
+        (item) =>
+          Number(item.serviceId) === Number(selectedServiceId)
+      )
+      .map((item) => Number(item.addonId))
+  );
+
+  const checkList = element("div", {
+    className: "check-list wide"
+  });
+
   for (const addon of data.addons) {
-    checkList.append(element("label", {}, [element("input", { type: "checkbox", name: "addonIds", value: addon.id, checked: compatibleIds.has(Number(addon.id)) }), document.createTextNode(addon.name)]));
+    checkList.append(
+      element("label", {}, [
+        element("input", {
+          type: "checkbox",
+          name: "addonIds",
+          value: addon.id,
+          checked: compatibleIds.has(Number(addon.id))
+        }),
+        document.createTextNode(addon.name)
+      ])
+    );
   }
-  compatibility.append(element("div", { className: "wide" }, [element("label", { text: "Adicionais compatíveis" }), checkList]));
-  compatibility.append(element("div", { className: "form-actions wide" }, element("button", { className: "button", type: "submit", text: "Salvar compatibilidade" })));
+
+  compatibility.append(
+    element("div", {
+      className: "wide"
+    }, [
+      element("label", {
+        text: "Adicionais compatíveis"
+      }),
+      checkList
+    ])
+  );
+
+  compatibility.append(
+    element("div", {
+      className: "form-actions wide"
+    }, element("button", {
+      className: "button",
+      type: "submit",
+      text: "Salvar compatibilidade"
+    }))
+  );
+
   compatibility.addEventListener("submit", async (event) => {
     event.preventDefault();
-    try {
-      const addonIds = [...compatibility.querySelectorAll('input[name="addonIds"]:checked')].map((input) => Number(input.value));
-      await request("/v1/admin/pricing/service-addons", { method: "PUT", body: { serviceId: Number(serviceSelect.value), addonIds } });
-      say(appMessage, "Compatibilidade atualizada.", "success");
-      await renderView();
-    } catch (error) { say(appMessage, error.message, "error"); }
-  });
-  forms.push(panel("Compatibilidade", "Apenas adicionais compatíveis são mostrados junto ao serviço no agendamento.", [compatibility]));
 
+    try {
+      const addonIds = [
+        ...compatibility.querySelectorAll(
+          'input[name="addonIds"]:checked'
+        )
+      ].map((input) => Number(input.value));
+
+      await request("/v1/admin/pricing/service-addons", {
+        method: "PUT",
+        body: {
+          serviceId: Number(serviceSelect.value),
+          addonIds
+        }
+      });
+
+      say(
+        appMessage,
+        "Compatibilidade atualizada.",
+        "success"
+      );
+
+      await renderView();
+    } catch (error) {
+      say(appMessage, error.message, "error");
+    }
+  });
+
+  forms.push(
+    panel(
+      "Compatibilidade",
+      "Apenas adicionais compatíveis são mostrados junto ao serviço no agendamento.",
+      [compatibility]
+    )
+  );
+
+  // TABELA DE REGRAS
   const rows = [
-    ...data.categoryServicePrices.map((item) => ({ type: "Serviço por categoria", target: `${optionLabel(data.categories, item.vehicleCategoryId)} · ${optionLabel(data.services, item.serviceId)}`, price: item.priceCents })),
-    ...data.categoryAddonPrices.map((item) => ({ type: "Adicional por categoria", target: `${optionLabel(data.categories, item.vehicleCategoryId)} · ${optionLabel(data.addons, item.addonId)}`, price: item.priceCents })),
-    ...data.modelServiceOverrides.map((item) => ({ type: item.active ? "Exceção de modelo" : "Exceção inativa", target: `${optionLabel(data.models, item.vehicleModelId, (model) => `${model.makeName} ${model.name}`)} · ${optionLabel(data.services, item.serviceId)}`, price: item.priceCents })),
+    ...data.categoryServicePrices.map((item) => ({
+      id: item.id,
+      type: "Serviço por categoria",
+      target: `${optionLabel(data.categories, item.vehicleCategoryId)} · ${optionLabel(data.services, item.serviceId)}`,
+      price: item.priceCents,
+      rule: "category-service",
+      vehicleCategoryId: item.vehicleCategoryId,
+      serviceId: item.serviceId
+    })),
+
+    ...data.categoryAddonPrices.map((item) => ({
+      id: item.id,
+      type: "Adicional por categoria",
+      target: `${optionLabel(data.categories, item.vehicleCategoryId)} · ${optionLabel(data.addons, item.addonId)}`,
+      price: item.priceCents,
+      rule: "category-addon",
+      vehicleCategoryId: item.vehicleCategoryId,
+      addonId: item.addonId
+    })),
+
+    ...data.modelServiceOverrides.map((item) => ({
+      id: item.id,
+      type: item.active ? "Exceção de modelo" : "Exceção inativa",
+      target: `${optionLabel(data.models, item.vehicleModelId, (model) => `${model.makeName} ${model.name}`)} · ${optionLabel(data.services, item.serviceId)}`,
+      price: item.priceCents,
+      rule: "model-service",
+      vehicleModelId: item.vehicleModelId,
+      serviceId: item.serviceId,
+      active: item.active
+    }))
   ];
-  replaceView([element("div", { className: "card-grid" }, forms), panel("Tabela atual", "Os valores são guardados em centavos para evitar erros de arredondamento.", [table(rows, [{ label: "Regra", value: "type" }, { label: "Aplicação", value: "target" }, { label: "Valor", value: (item) => moneyFormat.format(item.price / 100) }])])]);
+
+  function editRule(item) {
+    if (item.rule === "category-service") {
+      prepareEdit(
+        categoryService,
+        {
+          vehicleCategoryId: item.vehicleCategoryId,
+          serviceId: item.serviceId,
+          price: (item.price / 100).toFixed(2)
+        },
+        item
+      );
+    }
+
+    if (item.rule === "category-addon") {
+      prepareEdit(
+        categoryAddon,
+        {
+          vehicleCategoryId: item.vehicleCategoryId,
+          addonId: item.addonId,
+          price: (item.price / 100).toFixed(2)
+        },
+        item
+      );
+    }
+
+    if (item.rule === "model-service") {
+      prepareEdit(
+        modelService,
+        {
+          vehicleModelId: item.vehicleModelId,
+          serviceId: item.serviceId,
+          price: (item.price / 100).toFixed(2),
+          active: item.active
+        },
+        item
+      );
+
+      modelService.elements.active.checked = Boolean(item.active);
+    }
+  }
+
+  const rulesTable = table(
+    rows,
+    [
+      {
+        label: "Regra",
+        value: "type"
+      },
+      {
+        label: "Aplicação",
+        value: "target"
+      },
+      {
+        label: "Valor",
+        value: (item) =>
+          moneyFormat.format(item.price / 100)
+      }
+    ],
+    {
+      onEdit: editRule
+    }
+  );
+
+  replaceView([
+    element("div", {
+      className: "card-grid"
+    }, forms),
+
+    panel(
+      "Tabela atual",
+      "Os valores são guardados em centavos para evitar erros de arredondamento.",
+      [rulesTable]
+    )
+  ]);
 }
 
 async function renderOperations() {
