@@ -257,7 +257,7 @@ function objectFromForm(form, descriptors) {
   return result;
 }
 
-function table(items, columns, { onToggle, onEdit } = {}) {
+function table(items, columns, { onToggle, onEdit, onDelete } = {}) {
   if (!items.length) return element("p", { className: "empty", text: "Nenhum registro cadastrado ainda." });
   const tableNode = element("table");
   const header = element("thead");
@@ -273,8 +273,32 @@ function table(items, columns, { onToggle, onEdit } = {}) {
       row.append(cell);
     }
     const actions = element("td");
-    if (onEdit) actions.append(element("button", { className: "subtle-button", type: "button", text: "Editar", onClick: () => onEdit(item) }));
-    if (onToggle) actions.append(element("button", { className: "subtle-button", type: "button", text: item.active ? "Desativar" : "Ativar", onClick: () => onToggle(item) }));
+if (onEdit) {
+  actions.append(element("button", {
+    className: "subtle-button",
+    type: "button",
+    text: "Editar",
+    onClick: () => onEdit(item)
+  }));
+}
+
+if (onToggle) {
+  actions.append(element("button", {
+    className: "subtle-button",
+    type: "button",
+    text: item.active ? "Desativar" : "Ativar",
+    onClick: () => onToggle(item)
+  }));
+}
+
+if (onDelete) {
+  actions.append(element("button", {
+    className: "subtle-button",
+    type: "button",
+    text: "Excluir",
+    onClick: () => onDelete(item)
+  }));
+}
     row.append(actions);
     body.append(row);
   }
