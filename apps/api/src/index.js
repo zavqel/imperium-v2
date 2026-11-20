@@ -986,6 +986,59 @@ async function updatePrice(env, user, body, kind) {
   return { ok: true };
 }
 
+async function deletePrice(env, user, body, kind) {
+  if (kind === "category-service") {
+    const categoryId = parseId(body.vehicleCategoryId, "Categoria de veículo");
+    const serviceId = parseId(body.serviceId, "Serviço");
+
+    const current = await env.DB.prepare(
+      "SELECT price_cents AS priceCents FROM category_service_prices WHERE vehicle_category_id = ? AND service_id = ?"
+    ).bind(categoryId, serviceId).first();
+
+    if (!current) throw new HttpError(404, "Regra de preço não encontrada.");
+
+    await env.DB.prepare(
+      "DELETE FROM category_service_prices WHERE vehicle_category_id = ? AND service_id = ?"
+    ).bind(categoryId, serviceId).run();
+
+    await audit(env, user, "delete_price", "category_service_price", `${categoryId}:${serviceId}`, current, null);
+
+  } else if (kind === "category-addon") {
+    const categoryId = parseId(body.vehicleCategoryId, "Categoria de veículo");
+    const addonId = parseId(body.addonId, "Adicional");
+
+    const current = await env.DB.prepare(
+      "SELECT price_cents AS priceCents FROM category_addon_prices WHERE vehicle_category_id = ? AND addon_id = ?"
+    ).bind(categoryId, addonId).first();
+
+    if (!current) throw new HttpError(404, "Regra de preço não encontrada.");
+
+    await env.DB.prepare(
+      "DELETE FROM category_addon_prices WHERE vehicle_category_id = ? AND addon_id = ?"
+    ).bind(categoryId, addonId).run();
+
+    await audit(env, user, "delete_price", "category_addon_price", `${categoryId}:${addonId}`, current, null);
+
+  } else if (kind === "model-service") {
+    const modelId = parseId(body.vehicleModelId, "Modelo");
+    const serviceId = parseId(body.serviceId, "Serviço");
+
+    const current = await env.DB.prepare(
+      "SELECT price_cents AS priceCents, active FROM model_service_price_overrides WHERE vehicle_model_id = ? AND service_id = ?"
+    ).bind(modelId, serviceId).first();
+
+    if (!current) throw new HttpError(404, "Regra de preço não encontrada.");
+
+    await env.DB.prepare(
+      "DELETE FROM model_service_price_overrides WHERE vehicle_model_id = ? AND service_id = ?"
+    ).bind(modelId, serviceId).run();
+
+    await audit(env, user, "delete_price", "model_service_price_override", `${modelId}:${serviceId}`, current, null);
+  }
+
+  return { ok: true };
+}
+
 async function setCompatibility(env, user, body) {
   const serviceId = parseId(body.serviceId, "Serviço");
   const addonIds = [...new Set((Array.isArray(body.addonIds) ? body.addonIds : []).map((id) => parseId(id, "Adicional")))];
@@ -1073,6 +1126,9 @@ async function adminRoute(request, env, url) {
   if (request.method === "PUT" && path === "/v1/admin/pricing/category-service") return updatePrice(env, user, await parseJson(request), "category-service");
   if (request.method === "PUT" && path === "/v1/admin/pricing/category-addon") return updatePrice(env, user, await parseJson(request), "category-addon");
   if (request.method === "PUT" && path === "/v1/admin/pricing/model-service") return updatePrice(env, user, await parseJson(request), "model-service");
+  if (request.method === "DELETE" && path === "/v1/admin/pricing/category-service") return deletePrice(env, user, await parseJson(request), "category-service");
+if (request.method === "DELETE" && path === "/v1/admin/pricing/category-addon") return deletePrice(env, user, await parseJson(request), "category-addon");
+if (request.method === "DELETE" && path === "/v1/admin/pricing/model-service") return deletePrice(env, user, await parseJson(request), "model-service");
   if (request.method === "PUT" && path === "/v1/admin/pricing/service-addons") return setCompatibility(env, user, await parseJson(request));
   if (request.method === "GET" && path === "/v1/admin/operations") return operations(env);
   if (request.method === "PUT" && path === "/v1/admin/operations") return updateOperations(env, user, await parseJson(request));
